@@ -14,9 +14,9 @@
   "license": "ISC",
   "author": "Muhammad Raheel",
   "type": "module",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start":"nodemon server.js"
   },
   "dependencies": {
     "@prisma/client": "^7.8.0",
