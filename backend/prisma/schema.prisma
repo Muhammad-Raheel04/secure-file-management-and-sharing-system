@@ -25,6 +25,21 @@ model User{
   password String
   role Role @default(EMPLOYEE)
 
+  sessions Session[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Session{
+  id Int @id @default(autoincrement())
+  refreshToken String @unique
+  
+  userId Int
+  user User @relation(fields: [userId],references:[id],onDelete:Cascade)
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([userId])
 }
