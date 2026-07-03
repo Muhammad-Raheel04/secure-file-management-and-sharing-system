@@ -34,6 +34,9 @@ model User{
 
   sessions Session[]
 
+  employeeFiles File[] @relation("EmployeeFiles")
+  uploadedFiles File[] @relation("UploadedFiles")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -57,13 +60,15 @@ model File{
   storedName String
   mimeType String
   size Int
+  filePath String
 
   category FileCategory
 
   documentType String
 
   employeeId Int
-  uploadedById Int
-
+  employee User @relation("EmployeeFiles",fields:[employeeId], references: [id], onDelete: Cascade)
+  uploadedById Int  
+  uploadedBy User @relation("UploadedFiles", fields: [uploadedById], references: [id])
   createdAt DateTime @default(now())
 }
