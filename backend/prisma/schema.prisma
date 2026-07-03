@@ -18,6 +18,13 @@ enum Role{
   EMPLOYEE
 }
 
+enum FileCategory{
+  IDENTITY
+  EDUCATION
+  PROFESSIONAL
+  FINANCIAL
+  OTHER
+}
 model User{
   id Int @id @default(autoincrement())
   name String
@@ -42,4 +49,21 @@ model Session{
   expiresAt DateTime
 
   @@index([userId])
+}
+
+model File{
+  id Int @id @default(autoincrement())
+  originalName String
+  storedName String
+  mimeType String
+  size Int
+
+  category FileCategory
+
+  documentType String
+
+  employeeId Int
+  uploadedById Int
+
+  createdAt DateTime @default(now())
 }
