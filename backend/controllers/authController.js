@@ -1,5 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
 export const register = async (req, res) => {
     try {
         const { name, email, password } = req.body;
@@ -80,11 +82,22 @@ export const login = async (req, res) => {
                 message: "Password incorrect"
             })
         }
+        const accessToken = jwt.sign({ id: user.id, role: user.role }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+        const refreshToken = jwt.sign({ id: user.id, role: user.role }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
 
+        await prisma.session.create({
+            data: {
+                refreshToken,
+                userId: user.id,
+                expiresAt: new Date(Date.now() + 9 * 24 * 60 * 1000)
+            }
+        })
         return res.status(200).json({
             success: true,
             message: "Login Successfull",
             id: user.id,
+            accessToken,
+            refreshToken,
         })
     } catch (error) {
         return res.status(500).json({
