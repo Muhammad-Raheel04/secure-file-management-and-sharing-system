@@ -1,5 +1,7 @@
 import { prisma } from "../config/prisma.js";
 import fs from 'fs';
+import { isDocumentTypeValid } from "../utils/isDocumentTypeValid.js";
+import { isValidCategory } from "../utils/isValidCategory.js";
 
 export const uploadFile = async (req, res) => {
     let filePath;
@@ -23,6 +25,20 @@ export const uploadFile = async (req, res) => {
             })
         }
 
+        if (!isValidCategory(category)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid category",
+            });
+        }
+        
+        if (!isDocumentTypeValid(documentType)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid documentType",
+            });
+        }
+        
         const uploadedFile = await prisma.file.create({
             data: {
                 originalName: file.originalname,
@@ -45,13 +61,13 @@ export const uploadFile = async (req, res) => {
             file: uploadedFile,
         })
     } catch (error) {
-        if(filePath){
-            fs.unlink(filePath,()=>{});
+        if (filePath) {
+            fs.unlink(filePath, () => { });
         }
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
-            error,
+            error: error.message,
         })
     }
 }

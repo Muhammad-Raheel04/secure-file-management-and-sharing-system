@@ -89,7 +89,7 @@ export const login = async (req, res) => {
             data: {
                 refreshToken,
                 userId: user.id,
-                expiresAt: new Date(Date.now() + 9 * 24 * 60 * 1000)
+                expiresAt: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000)
             }
         })
         return res.status(200).json({
