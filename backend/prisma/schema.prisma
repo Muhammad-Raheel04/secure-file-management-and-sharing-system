@@ -25,6 +25,12 @@ enum FileCategory{
   FINANCIAL
   OTHER
 }
+
+enum FileAccess{
+  READ
+  WRITE
+}
+
 model User{
   id Int @id @default(autoincrement())
   name String
@@ -34,8 +40,10 @@ model User{
 
   sessions Session[]
 
-  employeeFiles File[] @relation("EmployeeFiles")
+  ownedFiles File[] @relation("OwnedFiles")
   uploadedFiles File[] @relation("UploadedFiles")
+  filePermissions FilePermission[] @relation("FilePermissionsForUser")
+  grantedFilePermissions FilePermission[] @relation("FilePermissionsGrantedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -66,9 +74,34 @@ model File{
 
   documentType String
 
-  employeeId Int
-  employee User @relation("EmployeeFiles",fields:[employeeId], references: [id], onDelete: Cascade)
+  ownerId Int
+  owner User @relation("OwnedFiles",fields:[ownerId], references: [id], onDelete: Cascade)
   uploadedById Int  
   uploadedBy User @relation("UploadedFiles", fields: [uploadedById], references: [id])
+  permissions FilePermission[]
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([uploadedById])
+}
+
+model FilePermission{
+  id Int @id @default(autoincrement())
+  fileId Int
+  userId Int
+  grantedById Int
+  access FileAccess
+
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user User @relation("FilePermissionsForUser", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy User @relation("FilePermissionsGrantedBy", fields: [grantedById], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([fileId, userId])
+  @@index([fileId])
+  @@index([userId])
+  @@index([grantedById])
 }
