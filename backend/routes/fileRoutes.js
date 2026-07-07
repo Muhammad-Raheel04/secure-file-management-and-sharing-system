@@ -3,7 +3,7 @@ import { deleteFile, getFile, grantFilePermission, listFilePermissions, revokeFi
 import { upload } from "../middlewares/uploadMiddleware.js";
 import { isAuthenticated } from "../middlewares/isAuthenticated.js";
 import { requireFileDeleteAccess, requireFileReadAccess, requireFileWriteAccess } from "../middlewares/fileAccess.js";
-import { authorizeRole } from "../middlewares/authorizeRole.js";
+import { requirePermissionGrantAccess } from "../middlewares/requirePermissionGrantAccess.js";
 
 const router = express.Router();
 
@@ -12,8 +12,8 @@ router.get("/:id", isAuthenticated, requireFileReadAccess, getFile);
 router.patch("/:id", isAuthenticated, requireFileWriteAccess, upload.single("file"), updateFile);
 router.delete("/:id", isAuthenticated, requireFileDeleteAccess, deleteFile);
 
-router.post("/:id/permissions", isAuthenticated, authorizeRole("ADMIN"), grantFilePermission);
-router.get("/:id/permissions", isAuthenticated, authorizeRole("ADMIN"), listFilePermissions);
-router.delete("/:id/permissions/:userId", isAuthenticated, authorizeRole("ADMIN"), revokeFilePermission);
+router.post("/:id/grant-permissions", isAuthenticated, requirePermissionGrantAccess, grantFilePermission);
+router.get("/:id/list-permissions", isAuthenticated, requirePermissionGrantAccess, listFilePermissions);
+router.delete("/:id/revoke-permissions/:userId", isAuthenticated, requirePermissionGrantAccess, revokeFilePermission);
 
 export default router;

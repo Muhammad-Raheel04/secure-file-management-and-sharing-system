@@ -107,3 +107,72 @@ export const login = async (req, res) => {
         })
     }
 }
+
+export const logout = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        await prisma.session.deleteMany({
+            where: {
+                id: userId,
+            }
+        })
+
+        return res.status(200).json({
+            success: true,
+            message: "Logged Out Successfully",
+        })
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        })
+    }
+}
+
+export const refresh = async (req, res) => {
+    try {
+        const { refreshToken } = req.body ?? {};
+
+        if (!refreshToken) {
+            return res.status(401).json({
+                success: false,
+                message: "Refresh Token missing",
+            })
+        }
+
+        let decoded;
+        try {
+            decoded = await jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        } catch (error) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid or expired refresh token",
+            })
+        }
+
+        const session = await prisma.session.findFirst({
+            where: {
+                userId: decoded.id,
+            }
+        })
+        if (!session) {
+            return res.status(404).json({
+                success: false,
+                message: "Session Not Found",
+            })
+        }
+
+        const newAccessToken = jwt.sign({ id: decoded.id}, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1h" });
+
+        return res.status(200).json({
+            success: true,
+            accessToken: newAccessToken,
+        })
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error:error.message,
+        })
+    }
+}
