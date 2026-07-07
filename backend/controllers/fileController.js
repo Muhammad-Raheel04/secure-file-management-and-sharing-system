@@ -1,7 +1,8 @@
-import fs from "fs/promises";
+import fs from "fs";
 import { prisma } from "../config/prisma.js";
 import { isDocumentTypeValid } from "../utils/isDocumentTypeValid.js";
 import { isValidCategory } from "../utils/isValidCategory.js";
+import path from 'path';
 
 const VALID_PERMISSION_ACCESS = new Set(["READ", "WRITE"]);
 
@@ -489,6 +490,29 @@ export const revokeFilePermission = async (req, res) => {
       success: true,
       message: "Permission revoked successfully",
     });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+export const serveFile = async (req, res) => {
+  try {
+    const file = req.fileRecord;
+    const absolutePath = path.resolve(file.filePath);
+
+    if (!fs.existsSync(absolutePath)) {
+      return res.status(404).json({
+        success: false,
+        message: "File not found",
+      });
+    }
+    res.setHeader("Content-Type", file.mimeType);
+    res.setHeader("Content-Disposition", `inline; filename="${file.originalName}"`);
+    res.sendFile(file.filePath, { root: process.cwd() });
   } catch (error) {
     return res.status(500).json({
       success: false,
