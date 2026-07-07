@@ -1,5 +1,5 @@
 import express from "express";
-import { deleteFile, getFile, grantFilePermission, listFilePermissions, revokeFilePermission, updateFile, uploadFile } from "../controllers/fileController.js";
+import { deleteFile, getFile, grantFilePermission, listFilePermissions, revokeFilePermission, updateFile, uploadFile, serveFile } from "../controllers/fileController.js";
 import { upload } from "../middlewares/uploadMiddleware.js";
 import { isAuthenticated } from "../middlewares/isAuthenticated.js";
 import { requireFileDeleteAccess, requireFileReadAccess, requireFileWriteAccess } from "../middlewares/fileAccess.js";
@@ -9,6 +9,7 @@ const router = express.Router();
 
 router.post("/upload", isAuthenticated, upload.single("file"), uploadFile);
 router.get("/:id", isAuthenticated, requireFileReadAccess, getFile);
+router.get("/:id/view", isAuthenticated, requireFileReadAccess, serveFile);
 router.patch("/:id", isAuthenticated, requireFileWriteAccess, upload.single("file"), updateFile);
 router.delete("/:id", isAuthenticated, requireFileDeleteAccess, deleteFile);
 
