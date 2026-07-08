@@ -5,7 +5,6 @@ const storage = multer.diskStorage({
     destination: async (req, file, cb) => {
         try {
             const { category } = req.body;
-            console.log(category);
             const uploadPath = path.join(process.cwd(), "uploads", category);
             await fs.mkdir(uploadPath, { recursive: true });
 
@@ -13,7 +12,6 @@ const storage = multer.diskStorage({
         } catch (err) {
             cb(err.message)
         }
-
     },
     filename: (req, file, cb) => {
         cb(null, Date.now() + "-" + file.originalname);
