@@ -8,7 +8,7 @@ const storage = multer.diskStorage({
             const uploadPath = path.join(process.cwd(), "uploads", category);
             await fs.mkdir(uploadPath, { recursive: true });
 
-            cb(null, uploadPath)
+            cb(null, `uploads/${category}`)
         } catch (err) {
             cb(err.message)
         }
