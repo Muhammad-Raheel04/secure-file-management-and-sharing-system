@@ -1,4 +1,5 @@
-import fs from "fs";
+import FS from "fs/promises";
+import fs from 'fs';
 import { prisma } from "../config/prisma.js";
 import { isDocumentTypeValid } from "../utils/isDocumentTypeValid.js";
 import { isValidCategory } from "../utils/isValidCategory.js";
@@ -11,7 +12,7 @@ const removeFileFromDisk = async (filePath) => {
     return;
   }
 
-  await fs.unlink(filePath).catch(() => { });
+  await FS.unlink(filePath).catch(() => { });
 };
 
 const parsePositiveInt = (value) => {
@@ -512,7 +513,7 @@ export const serveFile = async (req, res) => {
     }
     res.setHeader("Content-Type", file.mimeType);
     res.setHeader("Content-Disposition", `inline; filename="${file.originalName}"`);
-    res.sendFile(file.filePath, { root: process.cwd() });
+    res.sendFile(absolutePath);
   } catch (error) {
     return res.status(500).json({
       success: false,
