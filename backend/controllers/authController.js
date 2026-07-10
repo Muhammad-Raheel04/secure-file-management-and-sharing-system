@@ -110,10 +110,16 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
     try {
-        const userId = req.user.id;
-        await prisma.session.deleteMany({
+        const { refreshToken } = req.body;
+        if (!refreshToken) {
+            return res.status(400).json({
+                success: false,
+                message: "Refresh Token is required"
+            })
+        }
+        await prisma.session.delete({
             where: {
-                id: userId,
+                refreshToken
             }
         })
 
@@ -125,6 +131,7 @@ export const logout = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
+            error: error.message
         })
     }
 }
@@ -150,9 +157,9 @@ export const refresh = async (req, res) => {
             })
         }
 
-        const session = await prisma.session.findFirst({
+        const session = await prisma.session.findUnique({
             where: {
-                userId: decoded.id,
+                refreshToken
             }
         })
         if (!session) {
@@ -162,7 +169,7 @@ export const refresh = async (req, res) => {
             })
         }
 
-        const newAccessToken = jwt.sign({ id: decoded.id}, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1h" });
+        const newAccessToken = jwt.sign({ id: decoded.id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1h" });
 
         return res.status(200).json({
             success: true,
@@ -172,7 +179,7 @@ export const refresh = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
-            error:error.message,
+            error: error.message,
         })
     }
 }
