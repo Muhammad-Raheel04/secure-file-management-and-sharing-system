@@ -16,23 +16,12 @@ model Role{
   id Int @id @default(autoincrement())
   name String @unique
   userRoles UserRole[]
+  rolePermissions RolePermission[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 }
 
-enum FileCategory{
-  IDENTITY
-  EDUCATION
-  PROFESSIONAL
-  FINANCIAL
-  OTHER
-}
-
-enum FileAccess{
-  READ
-  WRITE
-}
 
 model User{
   id Int @id @default(autoincrement())
@@ -62,6 +51,17 @@ model UserRole{
 
   @@id([userId,roleId])
 }
+
+model RolePermission{
+  roleId Int
+  permissionId Int
+  
+  role Role @relation(fields:[roleId],references:[id],onDelete:Cascade)
+  permission Permission @relation(fields:[permissionId],references:[id],onDelete:Cascade)
+
+  @@id([roleId,permissionId])
+}
+
 model Session{
   id Int @id @default(autoincrement())
   refreshToken String @unique
@@ -83,9 +83,11 @@ model File{
   size Int
   filePath String
 
-  category FileCategory
+  categoryId Int
+  category FileCategory @relation(fields:[categoryId],references:[id])
 
-  documentType String
+  documentTypeId Int
+  documentType  DocumentType @relation(fields:[documentTypeId],references:[id])
 
   ownerId Int
   owner User @relation("OwnedFiles",fields:[ownerId], references: [id], onDelete: Cascade)
@@ -97,6 +99,8 @@ model File{
 
   @@index([ownerId])
   @@index([uploadedById])
+  @@index([categoryId])
+  @@index([documentTypeId])
 }
 
 model FilePermission{
@@ -104,7 +108,8 @@ model FilePermission{
   fileId Int
   userId Int
   grantedById Int
-  access FileAccess
+  fileAccessId Int
+  access FileAccess @relation(fields:[fileAccessId],references:[id])
 
   file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
   user User @relation("FilePermissionsForUser", fields: [userId], references: [id], onDelete: Cascade)
@@ -117,4 +122,43 @@ model FilePermission{
   @@index([fileId])
   @@index([userId])
   @@index([grantedById])
+}
+
+model FileCategory{
+ id Int @id @default(autoincrement())
+ name String @unique
+
+ files File[]
+
+ createdAt DateTime @default(now())
+ updatedAt DateTime @default(now())
+}
+
+model DocumentType{
+ id Int @id @default(autoincrement())
+ name String @unique
+
+ files File[]
+ createdAt DateTime @default(now())
+ updatedAt DateTime @default(now())
+}
+
+model Permission{
+  id Int @id @default(autoincrement())
+  name String @unique
+
+  rolePermissions RolePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FileAccess{
+  id Int @id @default(autoincrement())
+  name String @unique
+
+  filePermissions FilePermission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
