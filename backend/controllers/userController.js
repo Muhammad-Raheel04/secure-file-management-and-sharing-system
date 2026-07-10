@@ -224,18 +224,11 @@ export const revokeRole = async (req, res) => {
             });
         }
 
-        await prisma.user.update({
+        await prisma.userRole.delete({
             where: {
-                email: userEmail
-            },
-            data: {
-                userRoles: {
-                    disconnect: {
-                        userId_roleId: {
-                            userId: user.id,
-                            roleId: existingRole.id
-                        }
-                    }
+                userId_roleId: {
+                    userId: user.id,
+                    roleId: existingRole.id
                 }
             }
         })
