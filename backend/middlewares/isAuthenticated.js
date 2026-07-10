@@ -30,6 +30,13 @@ export const isAuthenticated = async (req, res, next) => {
         const user = await prisma.user.findUnique({
             where: {
                 id: decoded.id
+            },
+            include:{
+                userRoles: {
+                    include: {
+                        role: true
+                    }
+                }
             }
         })
         if (!user) {
@@ -38,18 +45,10 @@ export const isAuthenticated = async (req, res, next) => {
                 message: "User not found",
             });
         }
-        // if (!["ADMIN", "EMPLOYEE", "STAFF"].includes(user.role)) {
-        //     // user is logged in but not authorized
-        //     // 403 status code
-        //     return res.status(403).json({
-        //         success: false,
-        //         message: "You don't have to access to upload files"
-        //     })
-        // }
 
         req.user = {
             id: user.id,
-            role:user.role
+            roles: user.userRoles.map((userRole) => userRole.role)
         }
         next();
 
