@@ -4,10 +4,12 @@ import { upload } from "../middlewares/uploadMiddleware.js";
 import { isAuthenticated } from "../middlewares/isAuthenticated.js";
 import { requireFileDeleteAccess, requireFileReadAccess, requireFileWriteAccess } from "../middlewares/fileAccess.js";
 import { requirePermissionGrantAccess } from "../middlewares/requirePermissionGrantAccess.js";
+import { requirePermission } from "../middlewares/requirePermission.js";
+import { validateFileMetaData } from "../middlewares/validateFileMetaData.js";
 
 const router = express.Router();
 
-router.post("/upload", isAuthenticated, upload.single("file"), uploadFile);
+router.post("/upload", isAuthenticated, requirePermission("UPLOAD"), upload.single("file"), validateFileMetaData, uploadFile);
 router.get("/:id", isAuthenticated, requireFileReadAccess, getFile);
 router.get("/:id/view", isAuthenticated, requireFileReadAccess, serveFile);
 router.patch("/:id", isAuthenticated, requireFileWriteAccess, upload.single("file"), updateFile);
