@@ -140,7 +140,7 @@ export const grantRoleLevelPermissions = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: `Permission for ${role} Added Scucessfully`,
+            message: `${normalizedPermission} Permission for ${normalizedRole} Added Scucessfully`,
         })
     } catch (error) {
         return res.status(500).json({
@@ -161,6 +161,7 @@ export const revokeRoleLevelPermissions = async (req, res) => {
             })
         }
         const normalizedRole = role.trim().toUpperCase();
+        const normalizedPermission = permission.trim().toUpperCase();
 
         const exisitinRole = await prisma.role.findUnique({
             where: {
@@ -175,7 +176,7 @@ export const revokeRoleLevelPermissions = async (req, res) => {
         }
         const exisitingPermission = await prisma.permission.findUnique({
             where: {
-                name: permission
+                name: normalizedPermission
             }
         })
         if (!exisitingPermission) {
@@ -203,8 +204,10 @@ export const revokeRoleLevelPermissions = async (req, res) => {
 
         await prisma.rolePermission.delete({
             where: {
-                roleId: exisitinRole.id,
-                permissionId: exisitingPermission.id,
+                roleId_permissionId: {
+                    roleId: exisitinRole.id,
+                    permissionId: exisitingPermission.id,
+                }
             }
         })
 
