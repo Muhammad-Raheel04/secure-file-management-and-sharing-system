@@ -43,26 +43,6 @@ export const uploadFile = async (req, res) => {
       });
     }
 
-    const { category, documentType } = req.body;
-
-    if (!category || !documentType) {
-      await removeFileFromDisk(uploadedBinary.path);
-      return res.status(400).json({
-        success: false,
-        message: "file meta data is required.",
-      });
-    }
-
-    const validationError = validateFileMetadata({ category, documentType });
-
-    if (validationError) {
-      await removeFileFromDisk(uploadedBinary.path);
-      return res.status(400).json({
-        success: false,
-        message: validationError,
-      });
-    }
-
     const file = await prisma.file.create({
       data: {
         originalName: uploadedBinary.originalname,
@@ -70,29 +50,19 @@ export const uploadFile = async (req, res) => {
         mimeType: uploadedBinary.mimetype,
         size: uploadedBinary.size,
         filePath: uploadedBinary.path,
-        category,
-        documentType,
+        categoryId: req.category.id,
+        documentTypeId: req.documentType.id,
         ownerId: req.user.id,
         uploadedById: req.user.id,
       },
-      include: {
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-        uploadedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-      },
+      select: {
+        id: true,
+        originalName: true,
+        mimeType: true,
+        filePath:true,
+        size: true,
+        createdAt: true,
+      }
     });
 
     return res.status(201).json({
