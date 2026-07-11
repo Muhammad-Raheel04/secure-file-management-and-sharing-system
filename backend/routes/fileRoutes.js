@@ -11,7 +11,7 @@ import { requireFileAccess } from "../middlewares/requireFileAccess.js";
 const router = express.Router();
 
 router.post("/upload", isAuthenticated, requirePermission("UPLOAD"), upload.single("file"), validateFileMetaData, uploadFile);
-router.get("/:id/view", isAuthenticated, requireFileAccess("READ"), serveFile);
+router.get("/:id/view", isAuthenticated, requireFileAccess("VIEW"), serveFile);
 router.patch("/:id", isAuthenticated, requireFileWriteAccess, upload.single("file"), updateFile);
 router.delete("/:id", isAuthenticated, requireFileDeleteAccess, deleteFile);
 
