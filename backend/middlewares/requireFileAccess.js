@@ -34,6 +34,11 @@ export const requireFileAccess = (access) => {
                 })
             }
 
+            if (req.user?.roles.some((role) => role.name === 'ADMIN')) {
+                req.fileId = fileId;
+                req.fileRecord = file;
+                return next();
+            }
             if (file.ownerId === req.user.id) {
                 req.fileId = fileId;
                 req.fileRecord = file;
