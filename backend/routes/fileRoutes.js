@@ -13,7 +13,7 @@ const router = express.Router();
 router.post("/upload", isAuthenticated, requirePermission("UPLOAD"), upload.single("file"), validateFileMetaData, uploadFile);
 router.get("/:id/view", isAuthenticated, requireFileAccess("VIEW"), serveFile);
 router.patch("/:id", isAuthenticated, requireFileAccess("EDIT"), upload.single("file"), validateFileMetaData, updateFile);
-router.delete("/:id", isAuthenticated, requireFileDeleteAccess, deleteFile);
+router.delete("/:id", isAuthenticated, requireFileAccess("DELETE"), deleteFile);
 
 router.post("/:id/grant-permissions", isAuthenticated, requirePermissionGrantAccess, grantFilePermission);
 router.get("/:id/list-permissions", isAuthenticated, requirePermissionGrantAccess, listFilePermissions);
