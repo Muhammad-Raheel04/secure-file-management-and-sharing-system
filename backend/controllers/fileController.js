@@ -1,8 +1,6 @@
 import FS from "fs/promises";
 import fs from 'fs';
 import { prisma } from "../config/prisma.js";
-import { isDocumentTypeValid } from "../utils/isDocumentTypeValid.js";
-import { isValidCategory } from "../utils/isValidCategory.js";
 import { removeFileFromDisk } from "../utils/fileUtility.js";
 import path from 'path';
 
