@@ -84,32 +84,14 @@ export const updateFile = async (req, res) => {
   const uploadedBinary = req.file;
 
   try {
-    const { category, documentType } = req.body;
-    const validationError = validateFileMetadata({ category, documentType });
-
-    if (validationError) {
-      await removeFileFromDisk(uploadedBinary?.path);
-      return res.status(400).json({
-        success: false,
-        message: validationError,
-      });
-    }
-
-    if (category === undefined && documentType === undefined && !uploadedBinary) {
-      return res.status(400).json({
-        success: false,
-        message: "Provide category, documentType, or a replacement file",
-      });
-    }
-
     const data = {};
 
-    if (category !== undefined) {
-      data.category = category;
+    if (req.category) {
+      data.categoryId = req.category.id;
     }
 
-    if (documentType !== undefined) {
-      data.documentType = documentType;
+    if (req.documentType) {
+      data.documentTypeId = req.documentType.id;
     }
 
     if (uploadedBinary) {
@@ -124,34 +106,6 @@ export const updateFile = async (req, res) => {
     const updatedFile = await prisma.file.update({
       where: { id: req.fileId },
       data,
-      include: {
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-        uploadedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-        permissions: {
-          select: {
-            id: true,
-            userId: true,
-            access: true,
-            grantedById: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        },
-      },
     });
 
     if (uploadedBinary) {
