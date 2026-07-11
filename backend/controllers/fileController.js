@@ -14,17 +14,6 @@ const parsePositiveInt = (value) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 };
 
-const validateFileMetadata = ({ category, documentType }) => {
-  if (category !== undefined && !isValidCategory(category)) {
-    return "Invalid category";
-  }
-
-  if (documentType !== undefined && !isDocumentTypeValid(documentType)) {
-    return "Invalid documentType";
-  }
-
-  return null;
-};
 
 export const uploadFile = async (req, res) => {
   const uploadedBinary = req.file;
