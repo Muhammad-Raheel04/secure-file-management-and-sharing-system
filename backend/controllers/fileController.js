@@ -80,14 +80,6 @@ export const uploadFile = async (req, res) => {
   }
 };
 
-export const getFile = async (req, res) => {
-  return res.status(200).json({
-    success: true,
-    message: req.message,
-    file: req.fileRecord,
-  });
-};
-
 export const updateFile = async (req, res) => {
   const uploadedBinary = req.file;
 
