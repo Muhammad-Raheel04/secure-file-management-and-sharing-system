@@ -3,17 +3,11 @@ import fs from 'fs';
 import { prisma } from "../config/prisma.js";
 import { isDocumentTypeValid } from "../utils/isDocumentTypeValid.js";
 import { isValidCategory } from "../utils/isValidCategory.js";
+import { removeFileFromDisk } from "../utils/fileUtility.js";
 import path from 'path';
 
 const VALID_PERMISSION_ACCESS = new Set(["READ", "WRITE"]);
 
-const removeFileFromDisk = async (filePath) => {
-  if (!filePath) {
-    return;
-  }
-
-  await FS.unlink(filePath).catch(() => { });
-};
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -59,7 +53,7 @@ export const uploadFile = async (req, res) => {
         id: true,
         originalName: true,
         mimeType: true,
-        filePath:true,
+        filePath: true,
         size: true,
         createdAt: true,
       }
@@ -71,7 +65,7 @@ export const uploadFile = async (req, res) => {
       file,
     });
   } catch (error) {
-    await removeFileFromDisk(uploadedBinary?.path);
+    removeFileFromDisk(uploadedBinary?.path);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -109,7 +103,7 @@ export const updateFile = async (req, res) => {
     });
 
     if (uploadedBinary) {
-      await removeFileFromDisk(req.fileRecord.filePath);
+      removeFileFromDisk(uploadedBinary?.path);
     }
 
     return res.status(200).json({
@@ -118,7 +112,7 @@ export const updateFile = async (req, res) => {
       file: updatedFile,
     });
   } catch (error) {
-    await removeFileFromDisk(uploadedBinary?.path);
+    removeFileFromDisk(uploadedBinary?.path);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -133,7 +127,7 @@ export const deleteFile = async (req, res) => {
       where: { id: req.fileId },
     });
 
-    await removeFileFromDisk(deletedFile.filePath);
+    removeFileFromDisk(deletedFile.filePath);
 
     return res.status(200).json({
       success: true,
