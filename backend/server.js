@@ -1,5 +1,6 @@
 import express from 'express';
 import 'dotenv/config';
+import './cron/deletedExpiredFiles.js';
 import authRoutes from './routes/authRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
 import userRoutes from './routes/userRoutes.js';
