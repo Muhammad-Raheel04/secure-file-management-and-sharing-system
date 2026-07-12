@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "keywords": [
-    "employee-management-system",
-    "employee-management",
+    "secure-file-management",
+    "file-sharing",
+    "document-management",
     "nodejs",
     "express",
     "expressjs",
@@ -15,21 +16,22 @@
     "authorization",
     "rbac",
     "role-based-access-control",
-    "file-management",
-    "file-sharing",
+    "access-control",
+    "file-permissions",
+    "soft-delete",
     "multer",
     "rest-api",
     "backend",
     "api",
     "javascript"
   ],
-  "homepage": "https://github.com/Muhammad-Raheel04/employee-management-system#readme",
+  "homepage": "https://github.com/Muhammad-Raheel04/secure-file-management-and-sharing-system#readme",
   "bugs": {
-    "url": "https://github.com/Muhammad-Raheel04/employee-management-system/issues"
+    "url": "https://github.com/Muhammad-Raheel04/secure-file-management-and-sharing-system/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Muhammad-Raheel04/employee-management-system.git"
+    "url": "git+https://github.com/Muhammad-Raheel04/secure-file-management-and-sharing-system.git"
   },
   "license": "ISC",
   "author": "Muhammad Raheel",
