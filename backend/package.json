@@ -2,7 +2,27 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "keywords": [],
+  "keywords": [
+    "employee-management-system",
+    "employee-management",
+    "nodejs",
+    "express",
+    "expressjs",
+    "prisma",
+    "postgresql",
+    "jwt",
+    "authentication",
+    "authorization",
+    "rbac",
+    "role-based-access-control",
+    "file-management",
+    "file-sharing",
+    "multer",
+    "rest-api",
+    "backend",
+    "api",
+    "javascript"
+  ],
   "homepage": "https://github.com/Muhammad-Raheel04/employee-management-system#readme",
   "bugs": {
     "url": "https://github.com/Muhammad-Raheel04/employee-management-system/issues"
