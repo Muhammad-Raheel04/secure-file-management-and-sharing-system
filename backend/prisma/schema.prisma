@@ -96,6 +96,10 @@ model File{
   uploadedById Int  
   uploadedBy User @relation("UploadedFiles", fields: [uploadedById], references: [id])
   permissions FilePermission[]
+
+  isDeleted Boolean @default(false)
+  deletedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
