@@ -37,6 +37,8 @@ model User{
   filePermissions FilePermission[] @relation("FilePermissionsForUser")
   grantedFilePermissions FilePermission[] @relation("FilePermissionsGrantedBy")
 
+  sharedFiles FileShare[]
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -96,6 +98,8 @@ model File{
   permissions FilePermission[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  shares FileShare[]
 
   @@index([ownerId])
   @@index([uploadedById])
@@ -161,4 +165,26 @@ model FileAccess{
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model FileShare{
+  id Int @id @default(autoincrement())
+
+  token String @unique
+
+  fileId Int
+  file File @relation(fields:[fileId],references:[id],onDelete:Cascade)
+
+  sharedById Int
+  sharedBy User @relation(fields:[sharedById],references:[id],onDelete:Cascade)
+
+  expiresAt DateTime
+  isRevoked Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([token])
+  @@index([fileId])
+  @@index([expiresAt])
 }
