@@ -110,15 +110,19 @@ export const updateFile = async (req, res) => {
 
 export const deleteFile = async (req, res) => {
   try {
-    const deletedFile = await prisma.file.delete({
-      where: { id: req.fileId },
+    const deletedFile = await prisma.file.update({
+      where: {
+        id: req.fileId
+      },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date()
+      }
     });
-
-    removeFileFromDisk(deletedFile.filePath);
 
     return res.status(200).json({
       success: true,
-      message: "File deleted successfully",
+      message: "File moved to trash",
     });
   } catch (error) {
     return res.status(500).json({
@@ -419,3 +423,28 @@ export const serveFile = async (req, res) => {
     });
   }
 };
+
+export const restoreFile = async (req, res) => {
+  try {
+    await prisma.file.update({
+      where: {
+        id: req.fileId,
+      },
+      data: {
+        isDeleted: false,
+        deletedAt: null,
+      }
+    })
+
+    return res.status(200).json({
+      success: true,
+      message: "File Restored Successfully",
+    })
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message
+    });
+  }
+}
