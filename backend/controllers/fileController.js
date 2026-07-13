@@ -4,9 +4,6 @@ import { prisma } from "../config/prisma.js";
 import { removeFileFromDisk } from "../utils/fileUtility.js";
 import path from 'path';
 
-const VALID_PERMISSION_ACCESS = new Set(["READ", "WRITE"]);
-
-
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
@@ -135,56 +132,31 @@ export const deleteFile = async (req, res) => {
 
 export const grantFilePermission = async (req, res) => {
   try {
-    const fileId = parsePositiveInt(req.params.id);
-    const userId = parsePositiveInt(req.body.userId);
-    const access = req.body.access;
+    const file = req.fileRecord;
+    const fileId = req.fileId;
+    const normalizedAccess = req.access;
+    const { userEmail } = req.body
 
-    if (!fileId) {
+    if (!userEmail) {
       return res.status(400).json({
         success: false,
-        message: "Invalid file id",
+        message: "Required field is missing",
       });
     }
 
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user id",
-      });
-    }
 
-    if (!VALID_PERMISSION_ACCESS.has(access)) {
-      return res.status(400).json({
-        success: false,
-        message: "Access must be READ or WRITE",
-      });
-    }
-
-    const [file, targetUser] = await Promise.all([
-      prisma.file.findUnique({
-        where: { id: fileId },
-        select: {
-          id: true,
-          ownerId: true,
-        },
-      }),
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-        },
-      }),
-    ]);
-
-    if (!file) {
-      return res.status(404).json({
-        success: false,
-        message: "File not found",
-      });
-    }
+    const targetUser = await prisma.user.findUnique({
+      where: {
+        email: userEmail,
+      },
+      include: {
+        userRoles: {
+          include: {
+            role: true
+          }
+        }
+      }
+    })
 
     if (!targetUser) {
       return res.status(404).json({
@@ -192,12 +164,15 @@ export const grantFilePermission = async (req, res) => {
         message: "User not found",
       });
     }
+    const isAdmin = targetUser.userRoles.some(
+      (userRole) => userRole.role.name === "ADMIN"
+    )
 
-    if (targetUser.role === "ADMIN") {
+    if (isAdmin) {
       return res.status(400).json({
         success: false,
         message: "Admins already have full access",
-      });
+      })
     }
 
     if (file.ownerId === targetUser.id) {
@@ -206,31 +181,43 @@ export const grantFilePermission = async (req, res) => {
         message: "Owner already has full access",
       });
     }
+    const fileAccess = await prisma.fileAccess.findUnique({
+      where: {
+        name: normalizedAccess,
+      },
+    });
+
+    if (!fileAccess) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid access type.",
+      });
+    }
 
     const permission = await prisma.filePermission.upsert({
       where: {
         fileId_userId: {
           fileId,
-          userId,
+          userId: targetUser.id,
         },
       },
       update: {
-        access,
+        fileAccessId: fileAccess.id,
         grantedById: req.user.id,
       },
       create: {
         fileId,
-        userId,
-        access,
+        userId: targetUser.id,
+        fileAccessId: fileAccess.id,
         grantedById: req.user.id,
       },
       include: {
+        access: true,
         user: {
           select: {
             id: true,
             name: true,
             email: true,
-            role: true,
           },
         },
         grantedBy: {
@@ -238,7 +225,6 @@ export const grantFilePermission = async (req, res) => {
             id: true,
             name: true,
             email: true,
-            role: true,
           },
         },
       },
@@ -258,135 +244,91 @@ export const grantFilePermission = async (req, res) => {
   }
 };
 
-export const listFilePermissions = async (req, res) => {
-  try {
-    const fileId = parsePositiveInt(req.params.id);
-
-    if (!fileId) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid file id",
-      });
-    }
-
-    const file = await prisma.file.findUnique({
-      where: { id: fileId },
-      select: {
-        id: true,
-        originalName: true,
-        ownerId: true,
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-      },
-    });
-
-    if (!file) {
-      return res.status(404).json({
-        success: false,
-        message: "File not found",
-      });
-    }
-
-    const permissions = await prisma.filePermission.findMany({
-      where: { fileId },
-      orderBy: [
-        { access: "desc" },
-        { createdAt: "asc" },
-      ],
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-        grantedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-      },
-    });
-
-    return res.status(200).json({
-      success: true,
-      file,
-      permissions,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-      error: error.message,
-    });
-  }
-};
-
 export const revokeFilePermission = async (req, res) => {
   try {
-    const fileId = parsePositiveInt(req.params.id);
-    const userId = parsePositiveInt(req.params.userId);
+    const file = req.fileRecord;
+    const fileId = req.fileId;
+    const normalizedAccess = req.access;
+    const { userEmail } = req.body;
 
-    if (!fileId) {
+    if (!userEmail) {
       return res.status(400).json({
         success: false,
-        message: "Invalid file id",
+        message: "Required fields are missing",
       });
     }
 
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user id",
-      });
-    }
 
-    const file = await prisma.file.findUnique({
-      where: { id: fileId },
-      select: {
-        id: true,
-        ownerId: true,
+    const targetUser = await prisma.user.findUnique({
+      where: {
+        email: userEmail,
       },
-    });
+      include: {
+        userRoles: {
+          include: {
+            role: true
+          }
+        }
+      }
+    })
 
-    if (!file) {
+    if (!targetUser) {
       return res.status(404).json({
         success: false,
-        message: "File not found",
+        message: "User not found",
       });
     }
+    const isAdmin = targetUser.userRoles.some(
+      (userRole) => userRole.role.name === "ADMIN"
+    )
 
-    if (file.ownerId === userId) {
+    if (isAdmin) {
       return res.status(400).json({
         success: false,
-        message: "Owner access cannot be revoked",
-      });
+        message: "Can't revoke permissions from Admin",
+      })
     }
 
-    const deletedPermission = await prisma.filePermission.deleteMany({
+    if (file.ownerId === targetUser.id) {
+      return res.status(400).json({
+        success: false,
+        message: "Owner access can't be revoked",
+      });
+    }
+    const permission = await prisma.filePermission.findUnique({
       where: {
-        fileId,
-        userId,
+        fileId_userId: {
+          fileId,
+          userId: targetUser.id,
+        },
+      },
+      include: {
+        access: true,
       },
     });
 
-    if (deletedPermission.count === 0) {
+    if (!permission) {
       return res.status(404).json({
         success: false,
         message: "Permission not found",
       });
     }
+
+    if (permission.access.name !== normalizedAccess) {
+      return res.status(400).json({
+        success: false,
+        message: `User does not have ${normalizedAccess} permission`,
+      });
+    }
+
+    await prisma.filePermission.delete({
+      where: {
+        fileId_userId: {
+          fileId,
+          userId: targetUser.id,
+        },
+      },
+    });
 
     return res.status(200).json({
       success: true,
