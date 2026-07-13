@@ -1,8 +1,7 @@
 import express from "express";
-import { deleteFile, grantFilePermission, listFilePermissions, revokeFilePermission, updateFile, uploadFile, serveFile, restoreFile } from "../controllers/fileController.js";
+import { deleteFile, grantFilePermission, revokeFilePermission, updateFile, uploadFile, serveFile, restoreFile } from "../controllers/fileController.js";
 import { upload } from "../middlewares/uploadMiddleware.js";
 import { isAuthenticated } from "../middlewares/isAuthenticated.js";
-// import { requireFileDeleteAccess, requireFileReadAccess, requireFileWriteAccess } from "../middlewares/fileAccess.js";
 import { requirePermissionGrantAccess } from "../middlewares/requirePermissionGrantAccess.js";
 import { requirePermission } from "../middlewares/requirePermission.js";
 import { validateFileMetaData } from "../middlewares/validateFileMetaData.js";
@@ -17,8 +16,11 @@ router.get("/:id/view", isAuthenticated, checkFileNotDeleted, requireFileAccess(
 router.patch("/:id", isAuthenticated, checkFileNotDeleted, requireFileAccess("EDIT"), upload.single("file"), validateFileMetaData, updateFile);
 router.delete("/:id", isAuthenticated, checkFileNotDeleted, requireFileAccess("DELETE"), deleteFile);
 router.patch('/:id/restore', isAuthenticated, isFileDeleted, requirePermission("RESTORE"), requireFileAccess("RESTORE"), restoreFile)
-// router.post("/:id/grant-permissions", isAuthenticated, requirePermission("SHARE"), requireFileAccess("SHARE"),grantFilePermission);
-// router.get("/:id/list-permissions", isAuthenticated, requirePermissionGrantAccess, listFilePermissions);
-// router.delete("/:id/revoke-permissions/:userId", isAuthenticated, requirePermissionGrantAccess, revokeFilePermission);
+
+router.patch("/:id/grant-view-permission", isAuthenticated, requirePermission("VIEW"), requireFileAccess("VIEW"), (req, res, next) => { req.access = "VIEW"; next() }, grantFilePermission);
+router.delete("/:id/revoke-view-permission", isAuthenticated, requirePermission("VIEW"), requireFileAccess("VIEW"), (req, res, next) => { req.access = "VIEW"; next() }, revokeFilePermission);
+
+router.patch("/:id/grant-edit-permission", isAuthenticated, requirePermission("EDIT"), requireFileAccess("EDIT"), (req, res, next) => { req.access = "EDIT"; next() }, grantFilePermission);
+router.delete("/:id/revoke-edit-permission", isAuthenticated, requirePermission("EDIT"), requireFileAccess("EDIT"), (req, res, next) => { req.access = "EDIT"; next() }, revokeFilePermission);
 
 export default router;
