@@ -23,7 +23,8 @@
     "rest-api",
     "backend",
     "api",
-    "javascript"
+    "javascript",
+    "cors"
   ],
   "homepage": "https://github.com/Muhammad-Raheel04/secure-file-management-and-sharing-system#readme",
   "bugs": {
