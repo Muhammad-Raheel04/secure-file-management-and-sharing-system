@@ -1,6 +1,7 @@
 import multer from 'multer';
 import fs from 'fs/promises';
 import path from 'path';
+import { UPLOAD_TEMP_DIR } from '../constants/fileConstants.js';
 const storage = multer.diskStorage({
     destination: async (req, file, cb) => {
         try {
@@ -19,3 +20,23 @@ const storage = multer.diskStorage({
 })
 
 export const upload = multer({ storage });
+
+const chunkStorage = multer.diskStorage({
+    destination: async (req, file, cb) => {
+        try {
+            await fs.mkdir(UPLOAD_TEMP_DIR, { recursive: true });
+            cb(null, UPLOAD_TEMP_DIR);
+        } catch (err) {
+            cb(err);
+        }
+    },
+
+    filename(req, file, cb) {
+        cb(null, Date.now() + "-" + file.originalname);
+    },
+});
+
+export const chunkUpload = multer({
+    storage: chunkStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }
+});
