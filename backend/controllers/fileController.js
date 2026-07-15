@@ -1,14 +1,298 @@
-import FS from "fs/promises";
+import fsPromises from "fs/promises";
 import fs from 'fs';
+import fsExtra from 'fs-extra';
+import { randomUUID } from "crypto";
 import { prisma } from "../config/prisma.js";
-import { removeFileFromDisk } from "../utils/fileUtility.js";
+import { getUploadedChunks, getUploadSessionDir, removeFileFromDisk, sanitizeFileName } from "../utils/fileUtility.js";
 import path from 'path';
+import { UPLOAD_TEMP_DIR } from "../constants/fileConstants.js";
 
-const parsePositiveInt = (value) => {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+export const initUpload = async (req, res) => {
+  try {
+    const { fileName, totalChunks, category, documentType } = req.body;
+
+    if (!fileName || !totalChunks || !category || !documentType) {
+      return res.status(400).json({
+        success: false,
+        message: "Required fields are missing",
+      })
+    }
+
+    const normalizedCategory = category.trim().toUpperCase();
+    const normalizedDocumentType = documentType.trim().toUpperCase();
+
+    const [existingCategory, existingDocumentType] = await Promise.all([
+      prisma.fileCategory.findUnique({
+        where: {
+          name: normalizedCategory
+        }
+      }),
+
+      prisma.documentType.findUnique({
+        where: {
+          name: normalizedDocumentType
+        }
+      })
+    ]);
+
+    if (!existingCategory) {
+      return res.status(404).json({
+        success: false,
+        message: "Invalid category."
+      });
+    }
+
+    if (!existingDocumentType) {
+      return res.status(404).json({
+        success: false,
+        message: "Invalid document type."
+      });
+    }
+
+    const uploadId = randomUUID();
+    const uploadDir = getUploadSessionDir(uploadId);
+    await fsExtra.ensureDir(uploadDir);
+
+    await fsExtra.writeJSON(path.join(uploadDir, 'metadata.json'), {
+      fileName,
+      totalChunks: parseInt(totalChunks),
+      category,
+      documentType,
+      categoryId: existingCategory.id,
+      documentTypeId: existingDocumentType.id,
+      uploadId,
+      createdAt: new Date().toISOString()
+    })
+
+    return res.status(200).json({
+      success: true,
+      message: "Upload Session initialized",
+      uploadId,
+    })
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to Initialize upload",
+      error: error.message,
+    })
+  }
+}
+
+export const getUploadStatus = async (req, res) => {
+  try {
+    const { uploadId } = req.params;
+
+    if (!uploadId) {
+      return res.status(400).json({
+        success: false,
+        message: "uploadId is required",
+      })
+    }
+
+    const uploadDir = getUploadSessionDir(uploadId);
+
+    if (!fs.existsSync(uploadDir)) {
+      return res.status(404).json({
+        success: false,
+        message: "Upload Session not found",
+      })
+    }
+
+    const metaData = await fsExtra.readJSON(path.join(uploadDir, 'metadata.json'));
+    const uploadedChunks = await getUploadedChunks(uploadDir);
+
+    return res.status(200).json({
+      success: true,
+      uploadId,
+      fileName: metaData.fileName,
+      totalChunks: metaData.totalChunks,
+      uploadedChunks,
+      progress: Math.round((uploadedChunks.length / metaData.totalChunks) * 100),
+    })
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get upload status",
+      error: error.message,
+    })
+  }
+}
+
+export const uploadChunk = async (req, res) => {
+  try {
+    const { uploadId, chunkIndex, totalChunks } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No file uploaded",
+      })
+    }
+
+    if (!uploadId || chunkIndex === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "uploadId and chunkIndex are required",
+      })
+    }
+
+    const uploadDir = getUploadSessionDir(uploadId);
+
+    if (!fs.existsSync(uploadDir)) {
+      return res.status(404).json({
+        success: false,
+        message: "Upload session not found",
+      })
+    }
+
+    const chunkPath = path.join(uploadDir, `chunk_${chunkIndex}`);
+    await fsExtra.move(req.file.path, chunkPath, { overwrite: true });
+
+    const uploadedChunks = await getUploadedChunks(uploadDir);
+
+    return res.status(200).json({
+      success: true,
+      chunkIndex: parseInt(chunkIndex),
+      uploadedChunks,
+      progress: Math.round((uploadedChunks.length / parseInt(totalChunks) * 100))
+    })
+  } catch (error) {
+    removeFileFromDisk(req.file?.path);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to get upload status",
+      error: error.message,
+    })
+  }
+}
+
+export const completeUpload = async (req, res) => {
+  try {
+    const { uploadId } = req.body;
+
+    if (!uploadId) {
+      return res.status(400).json({
+        success: false,
+        message: "uploadId is required",
+      })
+    }
+
+    const uploadDir = getUploadSessionDir(uploadId);
+
+    if (!fs.existsSync(uploadDir)) {
+      return res.status(404).json({
+        success: false,
+        message: "Upload session not found",
+      })
+    }
+
+    const metadata = await fsExtra.readJSON(path.join(uploadDir, 'metadata.json'));
+    const uploadedChunks = await getUploadedChunks(uploadDir);
+
+    if (uploadedChunks.length !== metadata.totalChunks) {
+      return res.status(409).json({
+        success: false,
+        message: "Not all chunks are uploaded",
+        uploaded: uploadedChunks.length,
+        total: metadata.totalChunks,
+      })
+    }
+
+    const safeCategory = sanitizeFileName(metadata.category);
+    const safeFileName = sanitizeFileName(metadata.fileName);
+    const uploadDir_ = path.join(process.cwd(), "uploads", safeCategory);
+    await fsExtra.ensureDir(uploadDir_);
+
+    const finalPath = path.join(uploadDir_, `${Date.now()}-${safeFileName}`);
+    const writeStream = fs.createWriteStream(finalPath);
+
+    for (let i = 0; i < metadata.totalChunks; i++) {
+      const chunkPath = path.join(uploadDir, `chunk_${i}`);
+      const chunkData = await fsExtra.readFile(chunkPath);
+      writeStream.write(chunkData);
+    }
+
+    await new Promise((resolve, reject) => {
+      writeStream.end();
+      writeStream.on('finish', resolve);
+      writeStream.on('error', reject);
+    });
+
+    const stats = await fsExtra.stat(finalPath);
+
+    const file = await prisma.file.create({
+      data: {
+        originalName: metadata.fileName,
+        storedName: path.basename(finalPath),
+        mimeType: req.body.mimeType,
+
+
+        size: stats.size,
+        filePath: finalPath,
+        categoryId: metadata.categoryId,
+        documentTypeId: metadata.documentTypeId,
+        ownerId: req.user.id,
+        uploadedById: req.user.id,
+      },
+      select: {
+        id: true,
+        originalName: true,
+        mimeType: true,
+        filePath: true,
+        size: true,
+        createdAt: true,
+      }
+    });
+
+    try {
+      await fsExtra.remove(UPLOAD_TEMP_DIR);
+      console.log("Temporary upload directory removed.");
+    } catch (err) {
+      console.error("Failed to remove upload directory:", err);
+    }
+    return res.status(201).json({
+      success: true,
+      message: "File uploaded successfully",
+      file
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to complete upload",
+      error: error.message
+    });
+  }
+}
+
+export const cancelUpload = async (req, res) => {
+  try {
+    const { uploadId } = req.params;
+
+    if (!uploadId) {
+      return res.status(400).json({
+        success: false,
+        message: "uploadId is required"
+      });
+    }
+
+    const uploadDir = getUploadSessionDir(uploadId);
+
+    if (fs.existsSync(uploadDir)) {
+      await fsExtra.remove(UPLOAD_TEMP_DIR);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Upload cancelled and cleaned up"
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to cancel upload",
+      error: error.message
+    });
+  }
 };
-
 
 export const uploadFile = async (req, res) => {
   const uploadedBinary = req.file;
