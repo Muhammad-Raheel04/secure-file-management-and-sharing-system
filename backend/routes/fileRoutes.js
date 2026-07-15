@@ -1,6 +1,6 @@
 import express from "express";
-import { deleteFile, grantFilePermission, revokeFilePermission, updateFile, uploadFile, serveFile, restoreFile } from "../controllers/fileController.js";
-import { upload } from "../middlewares/uploadMiddleware.js";
+import { deleteFile, grantFilePermission, revokeFilePermission, updateFile, uploadFile, serveFile, restoreFile, getUploadStatus, uploadChunk, initUpload, completeUpload, cancelUpload } from "../controllers/fileController.js";
+import { chunkUpload, upload } from "../middlewares/uploadMiddleware.js";
 import { isAuthenticated } from "../middlewares/isAuthenticated.js";
 import { requirePermissionGrantAccess } from "../middlewares/requirePermissionGrantAccess.js";
 import { requirePermission } from "../middlewares/requirePermission.js";
@@ -22,5 +22,11 @@ router.delete("/:id/revoke-view-permission", isAuthenticated, requirePermission(
 
 router.patch("/:id/grant-edit-permission", isAuthenticated, requirePermission("EDIT"), requireFileAccess("EDIT"), (req, res, next) => { req.access = "EDIT"; next() }, grantFilePermission);
 router.delete("/:id/revoke-edit-permission", isAuthenticated, requirePermission("EDIT"), requireFileAccess("EDIT"), (req, res, next) => { req.access = "EDIT"; next() }, revokeFilePermission);
+
+router.post('/upload/init', isAuthenticated, requirePermission("UPLOAD"), initUpload);
+router.get('/upload/:uploadId/status', isAuthenticated, getUploadStatus);
+router.post('/upload/chunk', isAuthenticated, requirePermission("UPLOAD"), chunkUpload.single("file"), uploadChunk);
+router.post('/upload/complete', isAuthenticated, requirePermission("UPLOAD"), completeUpload);
+router.delete('/upload/:uploadId/cancel', isAuthenticated, cancelUpload);
 
 export default router;
