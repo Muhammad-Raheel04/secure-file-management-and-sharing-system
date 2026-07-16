@@ -245,7 +245,7 @@ export const completeUpload = async (req, res) => {
     });
 
     try {
-      await fsExtra.remove(UPLOAD_TEMP_DIR);
+      await fsExtra.remove(uploadDir);
       console.log("Temporary upload directory removed.");
     } catch (err) {
       console.error("Failed to remove upload directory:", err);
@@ -278,7 +278,7 @@ export const cancelUpload = async (req, res) => {
     const uploadDir = getUploadSessionDir(uploadId);
 
     if (fs.existsSync(uploadDir)) {
-      await fsExtra.remove(UPLOAD_TEMP_DIR);
+      await fsExtra.remove(uploadDir);
     }
 
     return res.status(200).json({
