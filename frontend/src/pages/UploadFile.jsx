@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { UploadCloud } from "lucide-react";
 import { toast } from "react-hot-toast";
-import API from "../utils/API";
+import API from "../utils/API.js";
 
 const CHUNK_SIZE = 2 * 1024 * 1024;
 

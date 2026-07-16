@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import React, { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
-import API from '../utils/API';
+import API from '../utils/API.js';
 import { toast } from 'react-hot-toast';
 
 const Signup = () => {
