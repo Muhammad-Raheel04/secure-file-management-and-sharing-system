@@ -17,6 +17,7 @@ const UploadFile = () => {
   const totalChunksRef = useRef(0);
   const uploadedChunksRef = useRef(new Set());
   const isInitializedRef = useRef(false);
+  const cancelUploadRef = useRef(false);
 
   const handleUpload = async () => {
     if (!file) {
@@ -43,6 +44,7 @@ const UploadFile = () => {
     }
 
     pendingResumeRef.current = false;
+    cancelUploadRef.current = false;
     setUploading(true);
 
     try {
@@ -95,6 +97,21 @@ const UploadFile = () => {
       }
 
       for (let i = 0; i < totalChunks; i++) {
+        if (cancelUploadRef.current) {
+          uploadIdRef.current = null;
+          pendingResumeRef.current = false;
+          uploadedChunksRef.current = new Set();
+          totalChunksRef.current = 0;
+          isInitializedRef.current = false;
+          setUploading(false);
+          setProgress(0);
+          setStatusMessage("");
+          setFile(null);
+          setCategory("");
+          setDocumentType("");
+          return;
+        }
+
         if (uploadedIndexes.has(i)) {
           setStatusMessage(`Chunk ${i + 1}/${totalChunks} already uploaded ✓`);
           continue;
@@ -156,11 +173,27 @@ const UploadFile = () => {
         setProgress(0);
         setStatusMessage("");
         setCategory(""),
-        setDocumentType("")
+          setDocumentType("")
       }, 3000);
 
     } catch (error) {
       console.error("Upload error:", error);
+
+      if (error.message === "Upload cancelled") {
+        toast.success("Upload Cancelled");
+        uploadIdRef.current = null;
+        pendingResumeRef.current = false;
+        uploadedChunksRef.current = new Set();
+        totalChunksRef.current = 0;
+        isInitializedRef.current = false;
+        setUploading(false);
+        setProgress(0);
+        setStatusMessage("");
+        setFile(null);
+        setCategory("");
+        setDocumentType("");
+        return;
+      }
 
       if (error.response?.status === 401) {
         setStatusMessage("Session expired. Please login again.");
@@ -182,7 +215,7 @@ const UploadFile = () => {
         toast.error("Network error. Auto-resume when online.");
       } else {
         pendingResumeRef.current = true;
-        setStatusMessage(`Upload paused: ${error.response?.data?.message || error.message}`);
+        setStatusMessage(`Upload paused`);
         toast.error("Upload interrupted.");
       }
     } finally {
@@ -220,6 +253,34 @@ const UploadFile = () => {
     isInitializedRef.current = false;
   };
 
+  const handleCancelUpload = async () => {
+    if (!uploadIdRef.current) return;
+
+    cancelUploadRef.current = true;
+    try {
+      await API.delete(`/file/upload/${uploadIdRef.current}/cancel`);
+
+      toast.success("Upload cancelled");
+
+      // Reset all upload state
+      uploadIdRef.current = null;
+      pendingResumeRef.current = false;
+      uploadedChunksRef.current = new Set();
+      totalChunksRef.current = 0;
+      isInitializedRef.current = false;
+
+      setUploading(false);
+      setProgress(0);
+      setStatusMessage("");
+      setFile(null);
+      setCategory("");
+      setDocumentType("");
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Failed to cancel upload"
+      );
+    }
+  };
   return (
     <div className="min-h-screen bg-[#003F3A] flex items-center justify-center p-4">
       <div className="bg-[#042f2b] rounded-lg w-full max-w-lg px-8 py-10 text-white shadow-xl">
@@ -314,15 +375,30 @@ const UploadFile = () => {
           </div>
         )}
 
-        <button
-          onClick={handleUpload}
-          disabled={!file || uploading}
-          className="bg-[#08cdbd] w-full p-3 rounded-md mt-8 text-black font-semibold hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {uploading ? "Uploading..." :
-            pendingResumeRef.current ? "Resume Upload" :
-              "Upload"}
-        </button>
+        <div className="flex gap-3 mt-8">
+
+          <button
+            onClick={handleUpload}
+            disabled={!file || uploading}
+            className="flex-1 bg-[#08cdbd] p-3 rounded-md text-black font-semibold"
+          >
+            {uploading
+              ? "Uploading..."
+              : pendingResumeRef.current
+                ? "Resume Upload"
+                : "Upload"}
+          </button>
+
+          {uploading && (
+            <button
+              onClick={handleCancelUpload}
+              className="px-5 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700"
+            >
+              Cancel
+            </button>
+          )}
+
+        </div>
       </div>
     </div>
   );
