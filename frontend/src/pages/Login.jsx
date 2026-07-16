@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import React, { useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
-import API from '../utils/API';
+import API from '../utils/API.js';
 import toast from 'react-hot-toast';
 import { useDispatch } from 'react-redux';
 import { setUser } from '../redux/userSlice';
@@ -30,9 +30,7 @@ const Login = () => {
             localStorage.setItem('accessToken', res.data?.accessToken)
             localStorage.setItem('refreshToken', res.data?.refreshToken);
             dispatch(setUser(res.data.user));
-            console.log(from)
             navigate(from, { replace: true });
-
 
         } catch (error) {
             toast.error(error?.response?.data?.message)
