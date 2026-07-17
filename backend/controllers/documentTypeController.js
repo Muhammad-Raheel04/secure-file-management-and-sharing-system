@@ -9,9 +9,10 @@ export const addDocumentType = async (req, res) => {
                 message: "Reuired field is missing",
             })
         }
+        const normalizeDocumentType=documentType.trim().toUpperCase();
         const exisitingDocumentType = await prisma.documentType.findUnique({
             where: {
-                name: documentType
+                name: normalizeDocumentType
             }
         })
         if (exisitingDocumentType) {
@@ -22,7 +23,7 @@ export const addDocumentType = async (req, res) => {
         }
         await prisma.documentType.create({
             data: {
-                name: documentType
+                name: normalizeDocumentType
             }
         })
         return res.status(200).json({
