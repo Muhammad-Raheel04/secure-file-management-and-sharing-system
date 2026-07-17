@@ -1,0 +1,12 @@
+{
+  "watch": ["./"],
+  "ignore": [
+    "node_modules",
+    "uploads",
+    "temp",
+    "generated",
+    "logs",
+    "parsed"
+  ],
+  "ext": "js,json"
+}
