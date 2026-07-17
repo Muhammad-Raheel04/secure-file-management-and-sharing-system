@@ -9,9 +9,10 @@ export const addCategory = async (req, res) => {
                 message: "Reuired field is missing",
             })
         }
+        const normalizedCategory=category.trim().toUpperCase();
         const exisitingCategory = await prisma.fileCategory.findUnique({
             where: {
-                name: category
+                name: normalizedCategory,
             }
         })
         if (exisitingCategory) {
@@ -22,7 +23,7 @@ export const addCategory = async (req, res) => {
         }
         await prisma.fileCategory.create({
             data: {
-                name: category
+                name: normalizedCategory
             }
         })
         return res.status(200).json({
