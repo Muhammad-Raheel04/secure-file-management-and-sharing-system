@@ -84,6 +84,7 @@ model File{
   mimeType String
   size Int
   filePath String
+  workbook    Workbook?
 
   categoryId Int
   category FileCategory @relation(fields:[categoryId],references:[id])
@@ -191,4 +192,90 @@ model FileShare{
   @@index([token])
   @@index([fileId])
   @@index([expiresAt])
+}
+
+model Workbook {
+  id              Int          @id @default(autoincrement())
+  fileId          Int             @unique
+  file            File            @relation(fields: [fileId], references: [id])
+  status          WorkbookStatus  @default(PENDING)
+  progress        Int             @default(0)
+  totalSheets     Int             @default(0)
+  processedSheets Int             @default(0)
+  errorMessage    String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  worksheets      Worksheet[]
+
+  @@index([status])
+}
+
+enum WorkbookStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Worksheet {
+  id          Int   @id @default(autoincrement())
+  workbookId  Int
+  workbook    Workbook @relation(fields: [workbookId], references: [id],onDelete:Cascade)
+  name        String
+  sheetIndex  Int      // Preserve worksheet order
+  totalRows   Int      @default(0)
+  totalColumns Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  columns     WorksheetColumn[]
+  rows        WorksheetRow[]
+
+  @@index([workbookId])
+  @@unique([workbookId, sheetIndex])
+}
+
+model WorksheetColumn {
+  id          Int  @id @default(autoincrement())
+  worksheetId Int
+  worksheet   Worksheet @relation(fields: [worksheetId], references: [id])
+  name        String
+  columnIndex Int      // Preserve column order
+  dataType    String?  // Optional: string, number, date, boolean
+  cells WorksheetCell[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([worksheetId])
+  @@unique([worksheetId, columnIndex])
+}
+
+model WorksheetRow {
+  id          Int      @id @default(autoincrement())
+  worksheetId Int
+  worksheet   Worksheet @relation(fields: [worksheetId], references: [id])
+  rowNumber   Int      // Preserve row number
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  cells       WorksheetCell[]
+
+  @@index([worksheetId])
+  @@unique([worksheetId, rowNumber])
+}
+
+model WorksheetCell {
+  id          Int   @id @default(autoincrement())
+  rowId       Int
+  row         WorksheetRow @relation(fields: [rowId], references: [id])
+  columnId    Int
+  column      WorksheetColumn @relation(fields: [columnId], references: [id])
+  value       String?  // Store as string for simplicity
+  valueType   String?  // text, number, date, boolean, formula
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([rowId, columnId])
+  @@index([rowId])
+  @@index([columnId])
+  @@index([rowId, columnId])
 }
