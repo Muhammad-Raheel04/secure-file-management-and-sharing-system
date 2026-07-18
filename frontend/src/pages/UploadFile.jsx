@@ -130,6 +130,10 @@ const UploadFile = () => {
         setStatusMessage(`Uploading chunk ${i + 1}/${totalChunks}...`);
 
         const chunkResponse = await API.post("/file/upload/chunk", formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }, {
           timeout: 30000,
           onUploadProgress: (event) => {
             const percentage = Math.min(
