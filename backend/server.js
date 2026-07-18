@@ -2,6 +2,7 @@ import express from 'express';
 import 'dotenv/config';
 import './cron/deletedExpiredFiles.js';
 import './workers/excelWorker.js';
+import './workers/emailWorker.js';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
