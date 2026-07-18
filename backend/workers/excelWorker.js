@@ -2,22 +2,30 @@ import { Worker } from 'bullmq';
 import { redisConnection } from '../config/redis.js';
 import { parseExcelFile } from '../services/excelParserService.js';
 import { prisma } from '../config/prisma.js';
+import { addEmailJob } from '../queues/emailQueue.js';
 
 const excelWorker = new Worker(
   'excel-processing',
   async (job) => {
     try {
-      const { workbookId } = job.data.workbookId;
+      const { workbookId } = job.data;
 
       const workbook = await prisma.workbook.findUnique({
         where: { id: workbookId },
-        include: { file: true }
+        include: {
+          file: {
+            include: {
+              owner: true
+            }
+          }
+        }
       });
       if (!workbook) {
         throw new Error(`Workbook with ID ${workbookId} not found in DB`);
       }
 
       await parseExcelFile(workbookId, workbook.file.filePath, job);
+      await addEmailJob(workbook.file.owner.name, workbook.file.owner.email, workbook.file.originalName);
       console.log(`Workbook ${workbookId} processed successfully`);
     } catch (error) {
       console.error(`Workbook ${workbookId} processing failed:`, error);
