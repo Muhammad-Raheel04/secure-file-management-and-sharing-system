@@ -2,6 +2,9 @@ import axios from 'axios'
 
 const API = axios.create({
     baseURL: import.meta.env.VITE_BACKEND_API_URL,
+    headers:{
+        'Content-Type':'application/json'
+    }
 })
 API.interceptors.request.use(
     (config) => {
@@ -40,4 +43,24 @@ API.interceptors.response.use(
         return Promise.reject(error);
     },
 )
+
+
+export const fileApi = {
+  getWorkbookInfo: (fileId) => 
+    API.get(`/file/${fileId}/workbook`),
+
+  getWorkbookStatus: (fileId) => 
+    API.get(`/file/${fileId}/workbook/status`),
+
+  getWorksheetData: (fileId, worksheetId, page, pageSize) => 
+    API.get(`/file/${fileId}/sheets/${worksheetId}`, {
+      params: { page, pageSize }
+    }),
+
+  downloadFile: (fileId) => 
+    API.get(`/file/${fileId}/download`, {
+      responseType: 'blob'
+    })
+};
+
 export default API;
