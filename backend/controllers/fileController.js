@@ -6,6 +6,9 @@ import { prisma } from "../config/prisma.js";
 import { getUploadedChunks, getUploadSessionDir, removeFileFromDisk, sanitizeFileName } from "../utils/fileUtility.js";
 import path from 'path';
 import { UPLOAD_TEMP_DIR } from "../constants/fileConstants.js";
+import { addExcelProcessingJob } from '../services/queueService.js';
+import { getWorkbookInfoService, getWorksheetDataService, getWorkbookStatusService } from '../services/excelService.js';
+import { getFileInfo, getFileStream, parseRange, getContentRange } from '../services/downloadService.js';
 
 export const initUpload = async (req, res) => {
   try {
@@ -163,104 +166,6 @@ export const uploadChunk = async (req, res) => {
       message: "Failed to get upload status",
       error: error.message,
     })
-  }
-}
-
-export const completeUpload = async (req, res) => {
-  try {
-    const { uploadId } = req.body;
-
-    if (!uploadId) {
-      return res.status(400).json({
-        success: false,
-        message: "uploadId is required",
-      })
-    }
-
-    const uploadDir = getUploadSessionDir(uploadId);
-
-    if (!fs.existsSync(uploadDir)) {
-      return res.status(404).json({
-        success: false,
-        message: "Upload session not found",
-      })
-    }
-
-    const metadata = await fsExtra.readJSON(path.join(uploadDir, 'metadata.json'));
-    const uploadedChunks = await getUploadedChunks(uploadDir);
-
-    if (uploadedChunks.length !== metadata.totalChunks) {
-      return res.status(409).json({
-        success: false,
-        message: "Not all chunks are uploaded",
-        uploaded: uploadedChunks.length,
-        total: metadata.totalChunks,
-      })
-    }
-
-    const safeCategory = sanitizeFileName(metadata.category);
-    const safeFileName = sanitizeFileName(metadata.fileName);
-    const uploadDir_ = path.join(process.cwd(), "uploads", safeCategory);
-    await fsExtra.ensureDir(uploadDir_);
-
-    const finalPath = path.join(uploadDir_, `${Date.now()}-${safeFileName}`);
-    const writeStream = fs.createWriteStream(finalPath);
-
-    for (let i = 0; i < metadata.totalChunks; i++) {
-      const chunkPath = path.join(uploadDir, `chunk_${i}`);
-      const chunkData = await fsExtra.readFile(chunkPath);
-      writeStream.write(chunkData);
-    }
-
-    await new Promise((resolve, reject) => {
-      writeStream.end();
-      writeStream.on('finish', resolve);
-      writeStream.on('error', reject);
-    });
-
-    const stats = await fsExtra.stat(finalPath);
-
-    const file = await prisma.file.create({
-      data: {
-        originalName: metadata.fileName,
-        storedName: path.basename(finalPath),
-        mimeType: req.body.mimeType,
-
-
-        size: stats.size,
-        filePath: finalPath,
-        categoryId: metadata.categoryId,
-        documentTypeId: metadata.documentTypeId,
-        ownerId: req.user.id,
-        uploadedById: req.user.id,
-      },
-      select: {
-        id: true,
-        originalName: true,
-        mimeType: true,
-        filePath: true,
-        size: true,
-        createdAt: true,
-      }
-    });
-
-    try {
-      await fsExtra.remove(uploadDir);
-      console.log("Temporary upload directory removed.");
-    } catch (err) {
-      console.error("Failed to remove upload directory:", err);
-    }
-    return res.status(201).json({
-      success: true,
-      message: "File uploaded successfully",
-      file
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Failed to complete upload",
-      error: error.message
-    });
   }
 }
 
@@ -627,6 +532,22 @@ export const revokeFilePermission = async (req, res) => {
   }
 };
 
+export const getFile = async (req, res) => {
+  try {
+    return res.status(200).json({
+      success: true,
+      message: req.message,
+      file: req.fileRecord,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
 export const serveFile = async (req, res) => {
   try {
     const file = req.fileRecord;
@@ -674,3 +595,265 @@ export const restoreFile = async (req, res) => {
     });
   }
 }
+
+export const completeUpload = async (req, res) => {
+  try {
+    const { uploadId, mimeType } = req.body;
+
+    if (!uploadId) {
+      return res.status(400).json({
+        success: false,
+        message: "uploadId is required",
+      });
+    }
+
+    const uploadDir = getUploadSessionDir(uploadId);
+
+    if (!fs.existsSync(uploadDir)) {
+      return res.status(404).json({
+        success: false,
+        message: "Upload session not found",
+      });
+    }
+
+    const metadata = await fsExtra.readJSON(path.join(uploadDir, 'metadata.json'));
+    const uploadedChunks = await getUploadedChunks(uploadDir);
+
+    if (uploadedChunks.length !== metadata.totalChunks) {
+      return res.status(409).json({
+        success: false,
+        message: "Not all chunks are uploaded",
+        uploaded: uploadedChunks.length,
+        total: metadata.totalChunks,
+      });
+    }
+
+    const safeCategory = sanitizeFileName(metadata.category);
+    const safeFileName = sanitizeFileName(metadata.fileName);
+    const uploadDir_ = path.join(process.cwd(), "uploads", safeCategory);
+    await fsExtra.ensureDir(uploadDir_);
+
+    const finalPath = path.join(uploadDir_, `${Date.now()}-${safeFileName}`);
+    const writeStream = fs.createWriteStream(finalPath);
+
+    for (let i = 0; i < metadata.totalChunks; i++) {
+      const chunkPath = path.join(uploadDir, `chunk_${i}`);
+      const chunkData = await fsExtra.readFile(chunkPath);
+      writeStream.write(chunkData);
+    }
+
+    await new Promise((resolve, reject) => {
+      writeStream.end();
+      writeStream.on('finish', resolve);
+      writeStream.on('error', reject);
+    });
+
+    const stats = await fsExtra.stat(finalPath);
+
+    let fileMimeType = mimeType || 'application/octet-stream';
+    if (!mimeType || mimeType === 'application/octet-stream') {
+      const ext = path.extname(metadata.fileName).toLowerCase();
+      if (ext === '.xlsx') {
+        fileMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      } else if (ext === '.xls') {
+        fileMimeType = 'application/vnd.ms-excel';
+      } else if (ext === '.csv') {
+        fileMimeType = 'text/csv';
+      } else if (ext === '.pdf') {
+        fileMimeType = 'application/pdf';
+      } else if (ext === '.jpg' || ext === '.jpeg') {
+        fileMimeType = 'image/jpeg';
+      } else if (ext === '.png') {
+        fileMimeType = 'image/png';
+      } else if (ext === '.docx') {
+        fileMimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      } else if (ext === '.doc') {
+        fileMimeType = 'application/msword';
+      }
+    }
+
+    const file = await prisma.file.create({
+      data: {
+        originalName: metadata.fileName,
+        storedName: path.basename(finalPath),
+        mimeType: fileMimeType,
+        size: stats.size,
+        filePath: finalPath,
+        categoryId: metadata.categoryId,
+        documentTypeId: metadata.documentTypeId,
+        ownerId: req.user.id,
+        uploadedById: req.user.id,
+      },
+      select: {
+        id: true,
+        originalName: true,
+        mimeType: true,
+        filePath: true,
+        size: true,
+        createdAt: true,
+      }
+    });
+
+    try {
+      await fsExtra.remove(uploadDir);
+    } catch (err) {
+      console.error("Failed to remove upload directory:", err);
+    }
+
+    const isExcel = file.mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                    file.mimeType === 'application/vnd.ms-excel' ||
+                    file.originalName.endsWith('.xlsx') ||
+                    file.originalName.endsWith('.xls');
+
+    if (isExcel) {
+      try {
+        const workbook = await prisma.workbook.create({
+          data: {
+            fileId: file.id,
+            status: 'PENDING'
+          }
+        });
+
+        const job = await addExcelProcessingJob(workbook.id, finalPath);
+      } catch (error) {
+        console.error('Failed to start Excel processing:', error);
+        console.error('Error stack:', error.stack);
+      }
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "File uploaded successfully",
+      file,
+      processingStarted: isExcel
+    });
+  } catch (error) {
+    console.error('Complete upload error:', error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to complete upload",
+      error: error.message
+    });
+  }
+};
+
+export const downloadFile = async (req, res) => {
+  try {
+    const file = req.fileRecord;
+    const { path: filePath, size, mimeType, fileName } = await getFileInfo(file);
+    
+    const range = req.headers.range;
+    
+    if (range) {
+      try {
+        const { start, end } = parseRange(range, size);
+        const chunkSize = end - start + 1;
+        
+        const stream = getFileStream(filePath, { start, end });
+        
+        res.writeHead(206, {
+          'Content-Range': getContentRange(start, end, size),
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunkSize,
+          'Content-Type': mimeType,
+          'Content-Disposition': `attachment; filename="${fileName}"`
+        });
+        
+        stream.pipe(res);
+      } catch (error) {
+        res.writeHead(416, {
+          'Content-Range': `bytes */${size}`
+        });
+        res.end();
+      }
+    } else {
+      const stream = getFileStream(filePath);
+      
+      res.writeHead(200, {
+        'Content-Length': size,
+        'Content-Type': mimeType,
+        'Content-Disposition': `attachment; filename="${fileName}"`
+      });
+      
+      stream.pipe(res);
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download file',
+      error: error.message
+    });
+  }
+};
+
+export const getWorkbookInfo = async (req, res) => {
+  try {
+    const file = req.fileRecord;
+    const workbook = await getWorkbookInfoService(file.id);
+    
+    res.json({
+      success: true,
+      workbook
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get workbook info',
+      error: error.message
+    });
+  }
+};
+
+
+export const getWorkbookStatus = async (req, res) => {
+  try {
+    const file = req.fileRecord;
+    const status = await getWorkbookStatusService(file.id);
+    
+    if (!status) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workbook not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      status
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get workbook status',
+      error: error.message
+    });
+  }
+};
+
+export const getWorksheetData = async (req, res) => {
+  try {
+    const { worksheetId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = Math.min(parseInt(req.query.pageSize) || 100, 1000);
+    
+    if (page < 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Page must be at least 1'
+      });
+    }
+    
+    const data = await getWorksheetDataService(parseInt(worksheetId), page, pageSize);
+    
+    res.json({
+      success: true,
+      ...data
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get worksheet data',
+      error: error.message
+    });
+  }
+};
