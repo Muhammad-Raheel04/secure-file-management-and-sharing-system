@@ -6,7 +6,7 @@ import { prisma } from "../config/prisma.js";
 import { getUploadedChunks, getUploadSessionDir, removeFileFromDisk, sanitizeFileName } from "../utils/fileUtility.js";
 import path from 'path';
 import { UPLOAD_TEMP_DIR } from "../constants/fileConstants.js";
-import { addExcelProcessingJob } from '../services/queueService.js';
+import { addExcelProcessingJob } from '../queues/excelQueue.js';
 import { getWorkbookInfoService, getWorksheetDataService, getWorkbookStatusService } from '../services/excelService.js';
 import { getFileInfo, getFileStream, parseRange, getContentRange } from '../services/downloadService.js';
 
