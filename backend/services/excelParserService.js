@@ -59,10 +59,12 @@ export const parseExcelFile = async (workbookId, filePath, job = null) => {
       throw new Error(`File not found at path: ${filePath}`);
     }
 
-    const tempWorkbook = new ExcelJS.Workbook();
+    let totalSheets = 0;
+    const counter = new ExcelJS.stream.xlsx.WorkbookReader(filePath);
 
-    await tempWorkbook.xlsx.readFile(filePath);
-    const totalSheets = tempWorkbook.worksheets.length;
+    for await (const worksheet of counter) {
+      totalSheets++;
+    }
 
     await prisma.workbook.update({
       where: { id: workbookId },
@@ -112,7 +114,7 @@ export const parseExcelFile = async (workbookId, filePath, job = null) => {
   } catch (error) {
     console.error('Excel parsing error:', error);
     console.error('Error stack:', error.stack);
-    
+
     await prisma.workbook.update({
       where: { id: workbookId },
       data: {
@@ -126,7 +128,7 @@ export const parseExcelFile = async (workbookId, filePath, job = null) => {
 };
 
 const processWorksheetStream = async (worksheetId, worksheet) => {
-  
+
   let columns = [];
   let columnIdMap = null;
   let isFirstRow = true;
