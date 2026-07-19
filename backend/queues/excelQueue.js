@@ -12,8 +12,8 @@ const excelQueue = new Queue('excel-processing', {
   }
 });
 
-excelQueue.on('waiting', (jobId) => {
-  console.log('Queue Event: Job waiting in queue - Job ID:', jobId);
+excelQueue.on('waiting', (job) => {
+  console.log('Queue Event: Job waiting in queue - Job ID:', job.id);
 });
 
 excelQueue.on('added', (job) => {
@@ -34,8 +34,8 @@ excelQueue.on('progress', (job, progress) => {
   console.log('Queue Event: Job progress - Job ID:', job.id, 'Progress:', progress);
 });
 
-excelQueue.on('delayed', (jobId) => {
-  console.log('Queue Event: Job delayed - Job ID:', jobId);
+excelQueue.on('delayed', (job) => {
+  console.log('Queue Event: Job delayed - Job ID:', job.id);
 });
 
 excelQueue.on('paused', () => {
