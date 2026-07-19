@@ -3,12 +3,14 @@ import { redisConnection } from '../config/redis.js';
 import { parseExcelFile } from '../services/excelParserService.js';
 import { prisma } from '../config/prisma.js';
 import { addEmailJob } from '../queues/emailQueue.js';
+import { addDLQJob } from '../queues/deadLetterQueue.js';
 
 const excelWorker = new Worker(
   'excel-processing',
   async (job) => {
+    const { workbookId } = job.data;
     try {
-      const { workbookId } = job.data;
+
 
       const workbook = await prisma.workbook.findUnique({
         where: { id: workbookId },
@@ -29,7 +31,17 @@ const excelWorker = new Worker(
       console.log(`Workbook ${workbookId} processed successfully`);
     } catch (error) {
       console.error(`Workbook ${workbookId} processing failed:`, error);
-      console.error('Error stack:', error.stack);
+
+      const maxAttempts = job.opts.attempts ?? 1;
+      const isLastAttempt = job.attemptsMade + 1 >= maxAttempts;
+
+      if (isLastAttempt) {
+        {
+          console.log("handing over the job to dlq");
+          await addDLQJob(job, error)
+        }
+      }
+
       throw error;
     }
   },
