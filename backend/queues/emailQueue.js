@@ -21,3 +21,11 @@ export const addEmailJob = async (name, email, fileName) => {
 
     return job;
 }
+export const addExcelFailedEmailJob = async (name, email, fileName, reason) => {
+    return await emailQueue.add('excel-processing-failed', {
+        name,
+        email,
+        fileName,
+        reason,
+    })
+}
