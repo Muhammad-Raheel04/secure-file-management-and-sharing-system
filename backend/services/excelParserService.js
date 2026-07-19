@@ -114,15 +114,6 @@ export const parseExcelFile = async (workbookId, filePath, job = null) => {
   } catch (error) {
     console.error('Excel parsing error:', error);
     console.error('Error stack:', error.stack);
-
-    await prisma.workbook.update({
-      where: { id: workbookId },
-      data: {
-        status: 'FAILED',
-        errorMessage: error.message
-      }
-    });
-    console.log('parseExcelFile - Workbook status updated to FAILED');
     throw error;
   }
 };
