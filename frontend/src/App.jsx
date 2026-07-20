@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import UploadFile from './pages/UploadFile';
 import ProtectRoute from './components/ProtectedRoute';
 import FileViewer from './pages/FileViewer';
+import Stats from './pages/Stats';
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
   {
     path:'/file/:id/view',
     element:<><FileViewer></FileViewer></>
+  },
+  {
+    path:'/stats',
+    element:<><Stats></Stats></>
   }
 ])
 const App = () => {
