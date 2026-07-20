@@ -11,6 +11,7 @@ The system is optimized to process **large Excel workbooks containing over 1 mil
 ### Processing Demo
 
 ![Processing 1 Million Excel Records](./frontend//public/image1.jpeg)
+![Processing 1 Million Excel Records](./frontend//public/image2.jpeg)
 
 > Example showing the background worker successfully processing an Excel workbook containing **1,000,000+ records** using streaming and batch database operations.
 
