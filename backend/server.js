@@ -14,6 +14,7 @@ import documentRoutes from './routes/documentRoutes.js';
 import permissionRoutes from './routes/permissionRoutes.js';
 import fileShareRoutes from './routes/fileShareRoutes.js';
 import accessRoutes from './routes/fileAccessRoutes.js';
+import statRoutes from './routes/statRoutes.js';
 const PORT = process.env.PORT;
 const app = express();
 
@@ -28,6 +29,7 @@ app.use('/api/v1/document', documentRoutes);
 app.use('/api/v1/permissions', permissionRoutes);
 app.use('/api/v1/share-file', fileShareRoutes);
 app.use('/api/v1/file-access', accessRoutes);
+app.use('/api/v1/stats', statRoutes);
 app.listen(PORT, () => {
     console.log(`visit http://localhost:${PORT}`)
 })
