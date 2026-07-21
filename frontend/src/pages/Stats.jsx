@@ -57,9 +57,10 @@ const Stats = () => {
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-[#001a1a] via-[#003F3A] to-[#001a1a] flex items-center justify-center">
-                <div className="relative">
+                <div className="flex flex-col items-center">
                     <div className="w-20 h-20 border-4 border-[#08cdbd] border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-[#08cdbd] mt-4 text-sm font-medium tracking-wider animate-pulse">
+
+                    <p className="text-[#08cdbd] mt-4 text-sm font-medium tracking-wider animate-pulse text-center">
                         LOADING DASHBOARD
                     </p>
                 </div>
@@ -88,58 +89,58 @@ const Stats = () => {
             title: "Total Uploads (Excel)",
             value: stats.totalFiles || 0,
             icon: Upload,
-            bg: "bg-[#08cdbd]/10",
             iconColor: "text-[#08cdbd]",
         },
         {
             title: "Completed",
             value: stats.completed || 0,
             icon: CheckCircle,
-            bg: "bg-[#10b981]/10",
             iconColor: "text-[#10b981]",
         },
         {
             title: "Processing",
             value: stats.processing || 0,
             icon: Clock,
-            bg: "bg-[#f59e0b]/10",
             iconColor: "text-[#f59e0b]",
         },
         {
             title: "Failed",
             value: stats.failed || 0,
             icon: TriangleAlert,
-            bg: "bg-[#ef4444]/10",
             iconColor: "text-[#ef4444]",
         },
     ];
 
     const performanceMetrics = [
-        {
-            label: "Success Rate",
-            value: `${(stats.successRate || stats.succesRate || 0).toFixed(1)}%`,
-            icon: TrendingUp,
-            color: "text-[#08cdbd]"
-        },
-        {
-            label: "Total Records Processed",
-            value: stats.totalRecordsProcessed?.toLocaleString() || "0",
-            icon: Database,
-            color: "text-[#fbbf24]"
-        },
-        {
-            label: "Avg. Processing Time(s)",
-            value: stats.avgProcessingTime?.toLocaleString() || "N/A",
-            icon: Cpu,
-            color: "text-[#a78bfa]"
-        },
-        {
-            label: "Active Jobs",
-            value: stats.activeJobsCount || 0,
-            icon: Server,
-            color: "text-[#60a5fa]"
-        }
-    ];
+    {
+        label: "Success Rate",
+        value: `${(stats.successRate || stats.succesRate || 0).toFixed(1)}%`,
+        icon: TrendingUp,
+        color: "text-[#08cdbd]",
+        iconColor: "text-[#08cdbd]"
+    },
+    {
+        label: "Total Records Processed",
+        value: stats.totalRecordsProcessed?.toLocaleString() || "0",
+        icon: Database,
+        color: "text-[#fbbf24]",
+        iconColor: "text-[#fbbf24]"
+    },
+    {
+        label: "Avg. Processing Time(s)",
+        value: stats.avgProcessingTime?.toLocaleString() || "N/A",
+        icon: Cpu,
+        color: "text-[#a78bfa]",
+        iconColor: "text-[#a78bfa]"
+    },
+    {
+        label: "Active Jobs",
+        value: stats.activeJobsCount || 0,
+        icon: Server,
+        color: "text-[#60a5fa]",
+        iconColor: "text-[#60a5fa]"
+    }
+];
 
     const containerVariants = {
         hidden: { opacity: 0, y: 20 },
@@ -214,7 +215,7 @@ const Stats = () => {
                                 </p>
                                 <div className="mt-3 h-1 w-16 bg-gradient-to-r from-[#08cdbd] to-[#06d4c0] rounded-full"></div>
                             </div>
-                            <div className={`p-3 rounded-xl ${card.bg}`}>
+                            <div className={`p-3 rounded-xl`}>
                                 <card.icon className={`text-2xl ${card.iconColor}`} />
                             </div>
                         </div>
@@ -245,7 +246,7 @@ const Stats = () => {
                                     {metric.value}
                                 </p>
                             </div>
-                            <metric.icon className={`text-3xl opacity-20 ${metric.color}`} />
+                            <metric.icon className={`text-3xl  ${metric.iconColor}`} />
                         </div>
                     </motion.div>
                 ))}
