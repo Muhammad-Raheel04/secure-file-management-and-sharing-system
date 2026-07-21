@@ -55,6 +55,7 @@ excelQueue.on('error', (err) => {
 });
 
 export const addExcelProcessingJob = async (workbookId, filePath) => {
+  await redisConnection.del('stats:dashboard');
   const job = await excelQueue.add('parse-excel', {
     workbookId,
     filePath
